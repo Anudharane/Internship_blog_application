@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in — BlogSpace</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo">Blog<span>Space</span></a>
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html">Home</a>
+      <a href="index.html#blogs">Blogs</a>
+      <a href="index.html#about">About</a>
+    </nav>
+    <div class="nav-cta" id="navCta"></div>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="auth-wrap">
+  <div class="auth-visual">
+
+  <span class="hero-eyebrow" style="color:var(--amber);">
+    Welcome back
+  </span>
+
+  <div class="login-illustration">
+    <img 
+      src="assets/images/login.png" 
+      alt="Woman working on a laptop"
+    >
+  </div>
+
+  <div class="login-quote">
+    <p class="quote">
+      "A blog is a conversation, not a monologue,
+      come back and keep yours going."
+    </p>
+
+    <p class="quote-by">
+      — every returning writer, eventually
+    </p>
+  </div>
+
+</div>
+
+  <div class="auth-form-wrap">
+    <form class="auth-form" id="loginForm" novalidate>
+      <h1>Log in</h1>
+      <p class="sub">New here? A demo account is pre-loaded: <strong>maya@blogspace.demo</strong> / <strong>Demo@1234</strong></p>
+
+      <div class="alert alert-error" id="loginAlert"></div>
+
+      <div class="field" id="loginEmailField">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
+        <p class="field-error">Enter a valid email address.</p>
+      </div>
+
+      <div class="field" id="loginPasswordField">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password">
+        <p class="field-error">Enter your password.</p>
+      </div>
+
+      <div class="field-row">
+        <div class="checkbox-row">
+          <input type="checkbox" id="rememberMe">
+          <label for="rememberMe">Remember me</label>
+        </div>
+        <a href="#" class="forgot-link" onclick="showToast('Password reset is not part of this demo.', 'error'); return false;">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Log in</button>
+
+      <p class="switch">Don't have an account? <a href="register.html">Register</a></p>
+    </form>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+</body>
+</html>

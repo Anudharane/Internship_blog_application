@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Blog — BlogSpace</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo">Blog<span>Space</span></a>
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html">Home</a>
+      <a href="index.html#blogs">Blogs</a>
+      <a href="index.html#about">About</a>
+    </nav>
+    <div class="nav-cta" id="navCta"></div>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<section class="section">
+  <div class="container">
+    <div class="dash-header">
+      <div>
+        <h1 id="editorPageTitle" style="font-family:var(--font-display);font-size:2rem;">Create Blog</h1>
+        <p style="color:var(--muted);margin-top:4px;">Draft it now, publish it whenever you're ready.</p>
+      </div>
+    </div>
+
+    <form id="blogForm" novalidate>
+      <div class="editor-layout">
+        <div class="editor-card">
+          <h2>Post details</h2>
+
+          <div class="field" id="blogTitleField">
+            <label for="blogTitle">Blog title</label>
+            <input type="text" id="blogTitle" placeholder="How I built my first blog app">
+            <p class="field-error">Title must be at least 4 characters.</p>
+          </div>
+
+          <div class="field" id="blogCategoryField">
+            <label for="blogCategory">Category</label>
+            <select id="blogCategory">
+              <option value="">Select a category</option>
+              <option value="Design">Design</option>
+              <option value="Development">Development</option>
+              <option value="Lifestyle">Lifestyle</option>
+              <option value="Career">Career</option>
+              <option value="Productivity">Productivity</option>
+              <option value="Other">Other</option>
+            </select>
+            <p class="field-error">Choose a category.</p>
+          </div>
+
+          <div class="field">
+            <label for="blogImage">Featured image URL <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+            <input type="url" id="blogImage" placeholder="https://example.com/image.jpg">
+          </div>
+
+          <div class="field" id="blogContentField">
+            <label for="blogContent">Content</label>
+            <textarea id="blogContent" rows="12" placeholder="Write your story…"></textarea>
+            <p class="field-error">Write at least 20 characters of content.</p>
+            <p class="char-count" id="charCount">0 characters</p>
+          </div>
+
+          <div class="editor-actions">
+            <button type="submit" class="btn btn-primary" id="publishBtn">Publish</button>
+            <button type="button" class="btn btn-outline" id="draftBtn">Save as draft</button>
+            <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="side-card">
+            <h4>Preview</h4>
+            <div class="preview-thumb" id="previewThumb">Image preview appears here</div>
+          </div>
+          <div class="side-card">
+            <h4>Tips</h4>
+            <ul class="tip-list">
+              <li>A specific title reads better than a clever one.</li>
+              <li>Leave the image blank and we'll pick a placeholder for you.</li>
+              <li>Save as draft any time — nothing publishes until you say so.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script src="js/script.js"></script>
+</body>
+</html>

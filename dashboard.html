@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — BlogSpace</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo">Blog<span>Space</span></a>
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html">Home</a>
+      <a href="index.html#blogs">Blogs</a>
+      <a href="index.html#about">About</a>
+    </nav>
+    <div class="nav-cta" id="navCta"></div>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="dash-layout">
+  <!-- ===== Sidebar ===== -->
+  <aside class="dash-sidebar">
+    <div class="dash-user">
+      <div class="dash-avatar" id="dashAvatar">?</div>
+      <div>
+        <div class="name" id="dashUserName">—</div>
+        <div class="email" id="dashUserEmail">—</div>
+      </div>
+    </div>
+    <nav class="dash-nav">
+      <a href="dashboard.html" class="active">▤ Overview</a>
+      <a href="create-blog.html">✎ Create blog</a>
+      <a href="index.html">🏠 View site</a>
+    </nav>
+    <button class="btn btn-outline btn-block" id="dashLogoutBtn">Log out</button>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <main class="dash-main">
+    <div class="dash-header">
+      <div>
+        <h1>Welcome back, <span id="dashGreetName">—</span></h1>
+        <p>Here's what's happening with your blog.</p>
+      </div>
+      <a href="create-blog.html" class="btn btn-primary">+ Create new blog</a>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="statTotal">0</div>
+        <div class="stat-label">Total blogs</div>
+      </div>
+      <div class="stat-card accent">
+        <div class="stat-num" id="statPublished">0</div>
+        <div class="stat-label">Published</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-num" id="statDrafts">0</div>
+        <div class="stat-label">Drafts</div>
+      </div>
+    </div>
+
+    <div class="dash-table-wrap" id="dashTableWrap">
+      <div class="dash-table-head">
+        <h3>Your blogs</h3>
+      </div>
+      <div id="dashTableBody"><!-- filled by script.js --></div>
+    </div>
+
+    <div class="empty-state hidden" id="dashEmptyState">
+      <h3>You haven't written anything yet</h3>
+      <p>Your published and draft posts will show up here.</p>
+      <a href="create-blog.html" class="btn btn-primary">Write your first blog</a>
+    </div>
+  </main>
+</div>
+
+<!-- ===== Delete confirmation modal ===== -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-box">
+    <h3>Delete this blog?</h3>
+    <p>This action can't be undone. The post will be permanently removed.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cancelDeleteBtn">Cancel</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlogSpace — Stories worth your time</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===== Navbar ===== -->
+<header class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo">Blog<span>Space</span></a>
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html" class="active">Home</a>
+      <a href="index.html#blogs">Blogs</a>
+      <a href="index.html#about">About</a>
+    </nav>
+    <div class="nav-cta" id="navCta"><!-- filled by script.js depending on login state --></div>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <div class="container">
+    <div>
+      <span class="hero-eyebrow">A place to publish, not just post</span>
+      <h1>Write it down.<br><em>Let it find</em> its readers.</h1>
+      <p>BlogSpace is a lightweight publishing space for people who'd rather write than wrestle with a CMS. Draft, publish, and track your posts — all in one clean dashboard.</p>
+      <div class="hero-actions">
+        <a href="register.html" class="btn btn-primary">Start writing — it's free</a>
+        <a href="#blogs" class="btn btn-outline">Browse stories</a>
+      </div>
+    </div>
+    <div class="hero-stamp">
+      <div class="hero-stamp-inner">
+        <span class="num" id="heroPostCount">4</span>
+        <span class="label">Stories<br>published</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Featured + Blog grid ===== -->
+<section class="section" id="blogs">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="kicker">Latest issue</span>
+        <h2>Featured story</h2>
+      </div>
+    </div>
+
+    <article class="featured-post" id="featuredPost"><!-- filled by script.js --></article>
+
+    <div class="section-head">
+      <div>
+        <span class="kicker">The archive</span>
+        <h2>More from the blog</h2>
+      </div>
+      <p>Fresh writing on design, development, and the occasional slow morning.</p>
+    </div>
+
+    <div class="blog-grid" id="blogGrid"><!-- filled by script.js --></div>
+    <div class="empty-state hidden" id="blogEmptyState">
+      <h3>No stories yet</h3>
+      <p>Be the first to publish something on BlogSpace.</p>
+      <a href="register.html" class="btn btn-primary">Create an account</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== About ===== -->
+<section class="section section-alt" id="about">
+  <div class="container">
+    <div class="about-strip">
+      <div>
+        <span class="kicker">About BlogSpace</span>
+        <h2>Built for writers, not admins</h2>
+      </div>
+      <div>
+        <p>BlogSpace started as a small internship project with one goal: make publishing a post feel as light as writing a note. No plugins, no build step, no server to babysit — just a clean editor, a dashboard that shows what's live and what's still a draft, and a home page that puts your writing in front of readers.</p>
+        <p>Everything you publish here is saved right in your browser, so you can register, write, and see your work live in minutes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer class="footer">
+  <div class="container">
+    <div>
+      <a href="index.html" class="logo">Blog<span>Space</span></a>
+      <p class="desc">A lightweight publishing space for people who'd rather write than wrestle with a CMS.</p>
+    </div>
+    <div>
+      <h4>Navigate</h4>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="index.html#blogs">Blogs</a></li>
+        <li><a href="index.html#about">About</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Account</h4>
+      <ul>
+        <li><a href="login.html">Log in</a></li>
+        <li><a href="register.html">Register</a></li>
+        <li><a href="dashboard.html">Dashboard</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <span>© 2026 BlogSpace. Built as an internship project.</span>
+    <span>Made with HTML, CSS &amp; JavaScript</span>
+  </div>
+</footer>
+
+<script src="js/script.js"></script>
+<script>
+  // Keep the hero stamp count honest — update it to the real number of published posts.
+  document.addEventListener("DOMContentLoaded", () => {
+    const el = document.getElementById("heroPostCount");
+    if (el && typeof getPublishedBlogs === "function") {
+      el.textContent = getPublishedBlogs().length;
+    }
+  });
+</script>
+</body>
+</html>
