@@ -1,35 +1,96 @@
-const fs = require('fs');
-const path = require('path');
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const DB_FILE = path.join(__dirname, 'data', 'db.json');
-
-function initDb() {
-  const dir = path.dirname(DB_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+// Define User Schema (preserving our custom String ID format compatibility)
+const UserSchema = new mongoose.Schema({
+  _id: { type: String },
+  fullName: { type: String, required: true },
+  email: { type: String, required: true, unique: true, lowercase: true },
+  password: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+}, {
+  toJSON: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  },
+  toObject: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
   }
+});
 
-  if (!fs.existsSync(DB_FILE)) {
-    const salt = bcrypt.genSaltSync(10);
-    const demoPasswordHash = bcrypt.hashSync("Demo@1234", salt);
-    
-    const now = Date.now();
-    const day = 1000 * 60 * 60 * 24;
+// Define Blog Schema (preserving our custom String ID format compatibility)
+const BlogSchema = new mongoose.Schema({
+  _id: { type: String },
+  title: { type: String, required: true },
+  category: { type: String, required: true },
+  image: { type: String },
+  content: { type: String, required: true },
+  status: { type: String, required: true, enum: ['published', 'draft'] },
+  authorId: { type: String, required: true },
+  authorName: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date }
+}, {
+  toJSON: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  },
+  toObject: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
+});
 
-    const initialData = {
-      users: [
+const User = mongoose.model('User', UserSchema);
+const Blog = mongoose.model('Blog', BlogSchema);
+
+// Dynamic seeding logic on connection
+async function seedSampleData() {
+  try {
+    const userCount = await User.countDocuments();
+    if (userCount === 0) {
+      const salt = bcrypt.genSaltSync(10);
+      const demoPasswordHash = bcrypt.hashSync("Demo@1234", salt);
+      
+      const demoUser = new User({
+        _id: "user_demo_1",
+        fullName: "Maya Chen",
+        email: "maya@blogspace.demo",
+        password: demoPasswordHash,
+        createdAt: new Date()
+      });
+      await demoUser.save();
+      console.log("Seeded demo user Maya Chen successfully!");
+    }
+
+    const blogCount = await Blog.countDocuments();
+    if (blogCount === 0) {
+      const now = Date.now();
+      const day = 1000 * 60 * 60 * 24;
+      const sampleBlogs = [
         {
-          id: "user_demo_1",
-          fullName: "Maya Chen",
-          email: "maya@blogspace.demo",
-          password: demoPasswordHash,
-          createdAt: new Date().toISOString()
-        }
-      ],
-      blogs: [
-        {
-          id: "blog_seed_1",
+          _id: "blog_seed_1",
           title: "Designing Interfaces People Actually Enjoy Using",
           category: "Design",
           image: "https://picsum.photos/seed/blogspace1/800/500",
@@ -37,10 +98,10 @@ function initDb() {
           authorId: "user_demo_1",
           authorName: "Maya Chen",
           status: "published",
-          createdAt: new Date(now - day * 6).toISOString()
+          createdAt: new Date(now - day * 6)
         },
         {
-          id: "blog_seed_2",
+          _id: "blog_seed_2",
           title: "A Beginner's Guide to LocalStorage in JavaScript",
           category: "Development",
           image: "https://picsum.photos/seed/blogspace2/800/500",
@@ -48,10 +109,10 @@ function initDb() {
           authorId: "user_demo_1",
           authorName: "Maya Chen",
           status: "published",
-          createdAt: new Date(now - day * 4).toISOString()
+          createdAt: new Date(now - day * 4)
         },
         {
-          id: "blog_seed_3",
+          _id: "blog_seed_3",
           title: "Why Slow Mornings Make for Better Writing",
           category: "Lifestyle",
           image: "https://picsum.photos/seed/blogspace3/800/500",
@@ -59,10 +120,10 @@ function initDb() {
           authorId: "user_demo_1",
           authorName: "Maya Chen",
           status: "published",
-          createdAt: new Date(now - day * 2).toISOString()
+          createdAt: new Date(now - day * 2)
         },
         {
-          id: "blog_seed_4",
+          _id: "blog_seed_4",
           title: "Understanding Client-Side Form Validation",
           category: "Development",
           image: "https://picsum.photos/seed/blogspace4/800/500",
@@ -70,60 +131,63 @@ function initDb() {
           authorId: "user_demo_1",
           authorName: "Maya Chen",
           status: "published",
-          createdAt: new Date(now - day * 1).toISOString()
+          createdAt: new Date(now - day * 1)
         }
-      ]
-    };
+      ];
 
-    fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf-8');
+      for (const blogData of sampleBlogs) {
+        const blog = new Blog(blogData);
+        await blog.save();
+      }
+      console.log("Seeded sample blogs successfully!");
+    }
+  } catch (err) {
+    console.error("Error seeding sample data:", err);
   }
 }
 
-function readData() {
-  initDb();
-  const raw = fs.readFileSync(DB_FILE, 'utf-8');
-  return JSON.parse(raw);
-}
-
-function writeData(data) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
-}
-
 module.exports = {
-  getUsers: () => {
-    return readData().users;
+  connect: async (uri) => {
+    try {
+      await mongoose.connect(uri);
+      console.log("Connected to MongoDB Atlas successfully");
+      await seedSampleData();
+    } catch (err) {
+      console.error("MongoDB Atlas connection failed:", err.message);
+      throw err;
+    }
   },
-  saveUser: (user) => {
-    const data = readData();
-    data.users.push(user);
-    writeData(data);
-    return user;
+  getUsers: async () => {
+    return await User.find();
   },
-  getBlogs: () => {
-    return readData().blogs;
+  getUserByEmail: async (email) => {
+    return await User.findOne({ email: email.toLowerCase() });
   },
-  saveBlog: (blog) => {
-    const data = readData();
-    data.blogs.push(blog);
-    writeData(data);
-    return blog;
+  saveUser: async (userData) => {
+    const user = new User(userData);
+    return await user.save();
   },
-  updateBlog: (id, updates) => {
-    const data = readData();
-    const idx = data.blogs.findIndex(b => b.id === id);
-    if (idx === -1) return null;
-    data.blogs[idx] = { 
-      ...data.blogs[idx], 
-      ...updates, 
-      updatedAt: new Date().toISOString() 
-    };
-    writeData(data);
-    return data.blogs[idx];
+  getBlogs: async () => {
+    return await Blog.find();
   },
-  deleteBlog: (id) => {
-    const data = readData();
-    data.blogs = data.blogs.filter(b => b.id !== id);
-    writeData(data);
-    return true;
+  getPublishedBlogs: async () => {
+    return await Blog.find({ status: 'published' }).sort({ createdAt: -1 });
+  },
+  getBlogsByUser: async (userId) => {
+    return await Blog.find({ authorId: userId }).sort({ createdAt: -1 });
+  },
+  getBlogById: async (id) => {
+    return await Blog.findById(id);
+  },
+  saveBlog: async (blogData) => {
+    const blog = new Blog(blogData);
+    return await blog.save();
+  },
+  updateBlog: async (id, updates) => {
+    updates.updatedAt = new Date();
+    return await Blog.findByIdAndUpdate(id, updates, { new: true });
+  },
+  deleteBlog: async (id) => {
+    return await Blog.findByIdAndDelete(id);
   }
 };
