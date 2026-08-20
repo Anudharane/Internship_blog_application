@@ -3,46 +3,28 @@
    All app logic lives in this one file and is shared by every
    page. Each page only has a few DOM elements with specific
    IDs, so the functions below check "does this element exist
-   on this page?" before doing anything — that's how one file
-   can safely run on five different pages.
+   on this page?" before doing anything.
 
-   LOCALSTORAGE KEYS
-   - "blogspace_users"   -> array of registered users
-   - "blogspace_session" -> the currently logged-in user (or null)
-   - "blogspace_blogs"   -> array of every blog post (all users)
+   AUTH STATE STORAGE KEY
+   - "blogspace_session" -> the currently logged-in user session
+                            with JWT token: { id, fullName, email, token }
    ========================================================= */
 
 const STORAGE_KEYS = {
-  USERS: "blogspace_users",
   SESSION: "blogspace_session",
-  BLOGS: "blogspace_blogs",
 };
 
+// Determine API URL based on how the frontend is accessed
+const API_URL = window.location.origin.startsWith("http") && window.location.port === "3000"
+  ? ""
+  : "http://localhost:3000";
+
 /* =========================================================
-   SECTION 1: LOW-LEVEL STORAGE HELPERS
-   Small wrappers around localStorage so the rest of the code
-   never has to call JSON.parse/JSON.stringify directly.
+   SECTION 1: LOW-LEVEL STORAGE & API HELPERS
    ========================================================= */
 
-function readList(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : [];
-  } catch (err) {
-    console.error(`Could not read "${key}" from localStorage`, err);
-    return [];
-  }
-}
-
-function writeList(key, list) {
-  localStorage.setItem(key, JSON.stringify(list));
-}
-
 /**
- * Session lives in localStorage when "Remember me" was checked
- * (survives closing the browser), otherwise in sessionStorage
- * (cleared when the tab/browser closes). readSession checks both
- * so it doesn't matter which one a page was loaded from.
+ * Reads session state from either localStorage or sessionStorage
  */
 function readSession() {
   try {
@@ -53,6 +35,10 @@ function readSession() {
   }
 }
 
+/**
+ * Writes session state. If remember is true, stores in localStorage
+ * so it survives browser closing. Otherwise stores in sessionStorage.
+ */
 function writeSession(user, remember) {
   const json = JSON.stringify(user);
   if (remember) {
@@ -64,97 +50,51 @@ function writeSession(user, remember) {
   }
 }
 
+/**
+ * Clears session state from both storages
+ */
 function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.SESSION);
   sessionStorage.removeItem(STORAGE_KEYS.SESSION);
 }
 
-/* =========================================================
-   SECTION 2: SAMPLE DATA (first-run seed)
-   Runs once. If "blogspace_blogs" has never been created, we
-   drop in a demo author + a handful of published posts so the
-   Home page has something to show on first launch.
-   ========================================================= */
+/**
+ * Generic fetch wrapper that handles JSON headers and authorization tokens
+ */
+async function apiFetch(endpoint, options = {}) {
+  const session = readSession();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+  
+  if (session && session.token) {
+    headers['Authorization'] = `Bearer ${session.token}`;
+  }
 
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'API request failed');
+  }
+
+  return response.json();
+}
+
+/**
+ * Seeding is now handled by the backend database
+ */
 function seedSampleData() {
-  const usersExist = localStorage.getItem(STORAGE_KEYS.USERS);
-  const blogsExist = localStorage.getItem(STORAGE_KEYS.BLOGS);
-
-  if (!usersExist) {
-    const demoUser = {
-      id: "user_demo_1",
-      fullName: "Maya Chen",
-      email: "maya@blogspace.demo",
-      password: "Demo@1234", // plain text on purpose — see README note on this
-      createdAt: new Date().toISOString(),
-    };
-    writeList(STORAGE_KEYS.USERS, [demoUser]);
-  }
-
-  if (!blogsExist) {
-    const now = Date.now();
-    const day = 1000 * 60 * 60 * 24;
-    const sampleBlogs = [
-      {
-        id: "blog_seed_1",
-        title: "Designing Interfaces People Actually Enjoy Using",
-        category: "Design",
-        image: "https://picsum.photos/seed/blogspace1/800/500",
-        content:
-          "Good interface design is mostly invisible — it disappears into the task at hand. In this post we walk through a handful of principles that separate interfaces people tolerate from interfaces people genuinely enjoy: clear feedback, forgiving forms, and typography that carries meaning rather than just filling space. We also look at small, unglamorous details like focus states and empty-state messaging, which quietly do more for trust than any hero animation.",
-        authorId: "user_demo_1",
-        authorName: "Maya Chen",
-        status: "published",
-        createdAt: new Date(now - day * 6).toISOString(),
-      },
-      {
-        id: "blog_seed_2",
-        title: "A Beginner's Guide to LocalStorage in JavaScript",
-        category: "Development",
-        image: "https://picsum.photos/seed/blogspace2/800/500",
-        content:
-          "LocalStorage is one of the simplest ways to persist data in the browser without a backend. In this guide we cover how to save, read, update and delete data with plain JavaScript, why everything is stored as a string, and common pitfalls like forgetting to JSON.stringify an object before saving it. By the end you'll be comfortable using LocalStorage to power small projects like this very blog application.",
-        authorId: "user_demo_1",
-        authorName: "Maya Chen",
-        status: "published",
-        createdAt: new Date(now - day * 4).toISOString(),
-      },
-      {
-        id: "blog_seed_3",
-        title: "Why Slow Mornings Make for Better Writing",
-        category: "Lifestyle",
-        image: "https://picsum.photos/seed/blogspace3/800/500",
-        content:
-          "There's a strange myth that good writing requires hustle. In practice, some of the clearest thinking happens in unhurried mornings — before notifications start competing for attention. This post is a short reflection on building a slower morning routine, and how that spare, quiet time tends to show up in the quality of what gets written later in the day.",
-        authorId: "user_demo_1",
-        authorName: "Maya Chen",
-        status: "published",
-        createdAt: new Date(now - day * 2).toISOString(),
-      },
-      {
-        id: "blog_seed_4",
-        title: "Understanding Client-Side Form Validation",
-        category: "Development",
-        image: "https://picsum.photos/seed/blogspace4/800/500",
-        content:
-          "Client-side validation is the first line of defence against bad data, and it's also what makes a form feel responsive and considerate rather than punishing. We break down how to validate required fields, emails and matching passwords using plain JavaScript, and how to surface errors in a way that helps rather than scolds the person filling out the form.",
-        authorId: "user_demo_1",
-        authorName: "Maya Chen",
-        status: "published",
-        createdAt: new Date(now - day * 1).toISOString(),
-      },
-    ];
-    writeList(STORAGE_KEYS.BLOGS, sampleBlogs);
-  }
+  // Noop on frontend
 }
 
 /* =========================================================
-   SECTION 3: SMALL UTILITIES
+   SECTION 2: SMALL UTILITIES
    ========================================================= */
-
-function generateId(prefix) {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
 
 function formatDate(isoString) {
   const d = new Date(isoString);
@@ -220,7 +160,7 @@ function hideAlert(alertEl) {
 }
 
 /* =========================================================
-   SECTION 4: AUTHENTICATION
+   SECTION 3: AUTHENTICATION
    ========================================================= */
 
 function getCurrentUser() {
@@ -233,7 +173,6 @@ function isLoggedIn() {
 
 /**
  * Protects a page: if nobody is logged in, bounce to login.html.
- * Call this at the top of any page that requires auth.
  */
 function requireAuth() {
   if (!isLoggedIn()) {
@@ -241,38 +180,38 @@ function requireAuth() {
   }
 }
 
-function registerUser({ fullName, email, password }) {
-  const users = readList(STORAGE_KEYS.USERS);
-  const emailTaken = users.some(
-    (u) => u.email.toLowerCase() === email.toLowerCase()
-  );
-  if (emailTaken) {
-    return { success: false, message: "An account with this email already exists." };
+async function registerUser({ fullName, email, password }) {
+  try {
+    const result = await apiFetch("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ fullName, email, password })
+    });
+    return { success: true, user: result.user };
+  } catch (err) {
+    return { success: false, message: err.message };
   }
-
-  const newUser = {
-    id: generateId("user"),
-    fullName,
-    email,
-    password, // NOTE: plain text — fine for a LocalStorage demo, never in production
-    createdAt: new Date().toISOString(),
-  };
-  users.push(newUser);
-  writeList(STORAGE_KEYS.USERS, users);
-  return { success: true, user: newUser };
 }
 
-function loginUser({ email, password, remember = false }) {
-  const users = readList(STORAGE_KEYS.USERS);
-  const match = users.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-  );
-  if (!match) {
-    return { success: false, message: "Invalid email or password." };
+async function loginUser({ email, password, remember = false }) {
+  try {
+    const result = await apiFetch("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password })
+    });
+    if (result.success) {
+      const sessionUser = { 
+        id: result.user.id, 
+        fullName: result.user.fullName, 
+        email: result.user.email,
+        token: result.token
+      };
+      writeSession(sessionUser, remember);
+      return { success: true, user: sessionUser };
+    }
+    return { success: false, message: result.message || "Invalid email or password." };
+  } catch (err) {
+    return { success: false, message: err.message };
   }
-  const sessionUser = { id: match.id, fullName: match.fullName, email: match.email };
-  writeSession(sessionUser, remember);
-  return { success: true, user: sessionUser };
 }
 
 function logoutUser() {
@@ -281,64 +220,58 @@ function logoutUser() {
 }
 
 /* =========================================================
-   SECTION 5: BLOG CRUD
+   SECTION 4: BLOG CRUD
    ========================================================= */
 
-function getAllBlogs() {
-  return readList(STORAGE_KEYS.BLOGS);
+async function getPublishedBlogs() {
+  try {
+    return await apiFetch("/api/blogs");
+  } catch (err) {
+    console.error("Failed to fetch published blogs:", err);
+    return [];
+  }
 }
 
-function getPublishedBlogs() {
-  return getAllBlogs()
-    .filter((b) => b.status === "published")
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+async function getBlogsByUser(userId) {
+  try {
+    return await apiFetch("/api/blogs/my");
+  } catch (err) {
+    console.error("Failed to fetch user blogs:", err);
+    return [];
+  }
 }
 
-function getBlogsByUser(userId) {
-  return getAllBlogs()
-    .filter((b) => b.authorId === userId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+async function getBlogById(id) {
+  try {
+    return await apiFetch(`/api/blogs/${id}`);
+  } catch (err) {
+    console.error(`Failed to fetch blog with ID ${id}:`, err);
+    return null;
+  }
 }
 
-function getBlogById(id) {
-  return getAllBlogs().find((b) => b.id === id) || null;
+async function createBlog({ title, category, image, content, status }) {
+  return await apiFetch("/api/blogs", {
+    method: "POST",
+    body: JSON.stringify({ title, category, image, content, status })
+  });
 }
 
-function createBlog({ title, category, image, content, status, authorId, authorName }) {
-  const blogs = getAllBlogs();
-  const newBlog = {
-    id: generateId("blog"),
-    title,
-    category,
-    image: image || `https://picsum.photos/seed/${encodeURIComponent(title)}/800/500`,
-    content,
-    status, // "published" | "draft"
-    authorId,
-    authorName,
-    createdAt: new Date().toISOString(),
-  };
-  blogs.push(newBlog);
-  writeList(STORAGE_KEYS.BLOGS, blogs);
-  return newBlog;
+async function updateBlog(id, updates) {
+  return await apiFetch(`/api/blogs/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(updates)
+  });
 }
 
-function updateBlog(id, updates) {
-  const blogs = getAllBlogs();
-  const idx = blogs.findIndex((b) => b.id === id);
-  if (idx === -1) return null;
-  blogs[idx] = { ...blogs[idx], ...updates, updatedAt: new Date().toISOString() };
-  writeList(STORAGE_KEYS.BLOGS, blogs);
-  return blogs[idx];
-}
-
-function deleteBlog(id) {
-  const blogs = getAllBlogs().filter((b) => b.id !== id);
-  writeList(STORAGE_KEYS.BLOGS, blogs);
+async function deleteBlog(id) {
+  return await apiFetch(`/api/blogs/${id}`, {
+    method: "DELETE"
+  });
 }
 
 /* =========================================================
-   SECTION 6: SHARED UI (navbar user state + mobile toggle)
-   Runs on every page.
+   SECTION 5: SHARED UI (navbar user state + mobile toggle)
    ========================================================= */
 
 function initNavbar() {
@@ -370,7 +303,7 @@ function initNavbar() {
 }
 
 /* =========================================================
-   SECTION 7: PAGE — HOME (index.html)
+   SECTION 6: PAGE — HOME (index.html)
    ========================================================= */
 
 function blogCardHtml(blog) {
@@ -393,13 +326,18 @@ function blogCardHtml(blog) {
   `;
 }
 
-function initHomePage() {
+async function initHomePage() {
   const featuredWrap = document.getElementById("featuredPost");
   const gridWrap = document.getElementById("blogGrid");
   const emptyWrap = document.getElementById("blogEmptyState");
+  const countStamp = document.getElementById("heroPostCount");
   if (!gridWrap) return; // not on this page
 
-  const published = getPublishedBlogs();
+  const published = await getPublishedBlogs();
+
+  if (countStamp) {
+    countStamp.textContent = published.length;
+  }
 
   if (published.length === 0) {
     if (featuredWrap) featuredWrap.classList.add("hidden");
@@ -436,16 +374,16 @@ function initHomePage() {
 }
 
 /* =========================================================
-   SECTION 8: PAGE — SINGLE POST (post.html)
+   SECTION 7: PAGE — SINGLE POST (post.html)
    ========================================================= */
 
-function initPostPage() {
+async function initPostPage() {
   const wrap = document.getElementById("postContent");
   if (!wrap) return;
 
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
-  const blog = id ? getBlogById(id) : null;
+  const blog = id ? await getBlogById(id) : null;
 
   if (!blog || blog.status !== "published") {
     wrap.innerHTML = `
@@ -474,7 +412,7 @@ function initPostPage() {
 }
 
 /* =========================================================
-   SECTION 9: PAGE — REGISTER (register.html)
+   SECTION 8: PAGE — REGISTER (register.html)
    ========================================================= */
 
 function initRegisterPage() {
@@ -488,7 +426,7 @@ function initRegisterPage() {
 
   const alertEl = document.getElementById("registerAlert");
 
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     hideAlert(alertEl);
 
@@ -525,7 +463,7 @@ function initRegisterPage() {
 
     if (hasError) return;
 
-    const result = registerUser({ fullName, email, password });
+    const result = await registerUser({ fullName, email, password });
     if (!result.success) {
       showAlert(alertEl, result.message, "error");
       return;
@@ -540,7 +478,7 @@ function initRegisterPage() {
 }
 
 /* =========================================================
-   SECTION 10: PAGE — LOGIN (login.html)
+   SECTION 9: PAGE — LOGIN (login.html)
    ========================================================= */
 
 function initLoginPage() {
@@ -554,7 +492,7 @@ function initLoginPage() {
 
   const alertEl = document.getElementById("loginAlert");
 
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     hideAlert(alertEl);
 
@@ -577,7 +515,7 @@ function initLoginPage() {
     }
     if (hasError) return;
 
-    const result = loginUser({ email, password, remember });
+    const result = await loginUser({ email, password, remember });
     if (!result.success) {
       showAlert(alertEl, result.message, "error");
       return;
@@ -588,7 +526,7 @@ function initLoginPage() {
 }
 
 /* =========================================================
-   SECTION 11: PAGE — DASHBOARD (dashboard.html)
+   SECTION 10: PAGE — DASHBOARD (dashboard.html)
    ========================================================= */
 
 function initDashboardPage() {
@@ -628,11 +566,15 @@ function initDashboardPage() {
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closeDeleteModal();
   });
-  confirmBtn.addEventListener("click", () => {
+  confirmBtn.addEventListener("click", async () => {
     if (pendingDeleteId) {
-      deleteBlog(pendingDeleteId);
-      showToast("Blog deleted.", "success");
-      renderDashboard();
+      try {
+        await deleteBlog(pendingDeleteId);
+        showToast("Blog deleted.", "success");
+        await renderDashboard();
+      } catch (err) {
+        showToast("Failed to delete blog.", "error");
+      }
     }
     closeDeleteModal();
   });
@@ -650,11 +592,11 @@ function initDashboardPage() {
   });
 }
 
-function renderDashboard() {
+async function renderDashboard() {
   const user = getCurrentUser();
   if (!user) return;
 
-  const myBlogs = getBlogsByUser(user.id);
+  const myBlogs = await getBlogsByUser(user.id);
   const total = myBlogs.length;
   const published = myBlogs.filter((b) => b.status === "published").length;
   const drafts = myBlogs.filter((b) => b.status === "draft").length;
@@ -698,10 +640,10 @@ function renderDashboard() {
 }
 
 /* =========================================================
-   SECTION 12: PAGE — CREATE / EDIT BLOG (create-blog.html)
+   SECTION 11: PAGE — CREATE / EDIT BLOG (create-blog.html)
    ========================================================= */
 
-function initCreateBlogPage() {
+async function initCreateBlogPage() {
   const form = document.getElementById("blogForm");
   if (!form) return; // not on this page
 
@@ -711,7 +653,7 @@ function initCreateBlogPage() {
 
   const params = new URLSearchParams(window.location.search);
   const editId = params.get("id");
-  const existingBlog = editId ? getBlogById(editId) : null;
+  const existingBlog = editId ? await getBlogById(editId) : null;
 
   const pageTitle = document.getElementById("editorPageTitle");
   const publishBtn = document.getElementById("publishBtn");
@@ -779,7 +721,7 @@ function initCreateBlogPage() {
     return valid;
   }
 
-  function saveBlog(status) {
+  async function saveBlog(status) {
     if (!validate()) return;
 
     const payload = {
@@ -790,21 +732,21 @@ function initCreateBlogPage() {
       status,
     };
 
-    if (existingBlog) {
-      updateBlog(existingBlog.id, payload);
-      showToast(status === "published" ? "Blog published!" : "Draft saved.", "success");
-    } else {
-      createBlog({
-        ...payload,
-        authorId: user.id,
-        authorName: user.fullName,
-      });
-      showToast(status === "published" ? "Blog published!" : "Draft saved.", "success");
-    }
+    try {
+      if (existingBlog) {
+        await updateBlog(existingBlog.id, payload);
+        showToast(status === "published" ? "Blog published!" : "Draft saved.", "success");
+      } else {
+        await createBlog(payload);
+        showToast(status === "published" ? "Blog published!" : "Draft saved.", "success");
+      }
 
-    setTimeout(() => {
-      window.location.href = "dashboard.html";
-    }, 700);
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 700);
+    } catch (err) {
+      showToast("Failed to save blog: " + err.message, "error");
+    }
   }
 
   form.addEventListener("submit", (e) => {
@@ -820,7 +762,7 @@ function initCreateBlogPage() {
 }
 
 /* =========================================================
-   SECTION 13: BOOTSTRAP
+   SECTION 12: BOOTSTRAP
    Runs on every page once the DOM is ready.
    ========================================================= */
 
