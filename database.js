@@ -170,8 +170,18 @@ module.exports = {
   getBlogs: async () => {
     return await Blog.find();
   },
-  getPublishedBlogs: async () => {
-    return await Blog.find({ status: 'published' }).sort({ createdAt: -1 });
+  getPublishedBlogs: async (filters = {}) => {
+    const query = { status: 'published' };
+    if (filters.category && filters.category !== 'All') {
+      query.category = filters.category;
+    }
+    if (filters.search) {
+      query.$or = [
+        { title: { $regex: filters.search, $options: 'i' } },
+        { content: { $regex: filters.search, $options: 'i' } }
+      ];
+    }
+    return await Blog.find(query).sort({ createdAt: -1 });
   },
   getBlogsByUser: async (userId) => {
     return await Blog.find({ authorId: userId }).sort({ createdAt: -1 });
@@ -189,5 +199,12 @@ module.exports = {
   },
   deleteBlog: async (id) => {
     return await Blog.findByIdAndDelete(id);
+  },
+  resetPassword: async (email, newHashedPassword) => {
+    return await User.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      { password: newHashedPassword },
+      { new: true }
+    );
   }
 };

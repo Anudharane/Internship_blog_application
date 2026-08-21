@@ -1148,3 +1148,67 @@ input, select, textarea {
 .login-quote {
     margin-top: 20px;
 }
+
+/* =========================================================
+   SEARCH & FILTER SECTION STYLES
+   ========================================================= */
+.filter-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding: 16px;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.search-box {
+  flex: 1;
+  min-width: 280px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  transition: border-color var(--transition);
+}
+
+.search-box input:focus {
+  border-color: var(--cobalt);
+  outline: none;
+}
+
+.category-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-filter {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.btn-filter:hover {
+  border-color: var(--muted);
+  color: var(--ink);
+}
+
+.btn-filter.active {
+  background: var(--cobalt);
+  border-color: var(--cobalt);
+  color: #fff;
+}

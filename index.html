@@ -65,6 +65,22 @@
       <p>Fresh writing on design, development, and the occasional slow morning.</p>
     </div>
 
+    <!-- Search and Categories Filter Section -->
+    <div class="filter-wrap">
+      <div class="search-box">
+        <input type="text" id="blogSearch" placeholder="Search articles by title or content...">
+      </div>
+      <div class="category-filters" id="categoryFilters">
+        <button class="btn-filter active" data-category="All">All</button>
+        <button class="btn-filter" data-category="Design">Design</button>
+        <button class="btn-filter" data-category="Development">Development</button>
+        <button class="btn-filter" data-category="Lifestyle">Lifestyle</button>
+        <button class="btn-filter" data-category="Career">Career</button>
+        <button class="btn-filter" data-category="Productivity">Productivity</button>
+        <button class="btn-filter" data-category="Other">Other</button>
+      </div>
+    </div>
+
     <div class="blog-grid" id="blogGrid"><!-- filled by script.js --></div>
     <div class="empty-state hidden" id="blogEmptyState">
       <h3>No stories yet</h3>

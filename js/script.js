@@ -223,9 +223,14 @@ function logoutUser() {
    SECTION 4: BLOG CRUD
    ========================================================= */
 
-async function getPublishedBlogs() {
+async function getPublishedBlogs(filters = {}) {
   try {
-    return await apiFetch("/api/blogs");
+    const params = new URLSearchParams();
+    if (filters.search) params.append("search", filters.search);
+    if (filters.category && filters.category !== "All") params.append("category", filters.category);
+    
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    return await apiFetch(`/api/blogs${queryString}`);
   } catch (err) {
     console.error("Failed to fetch published blogs:", err);
     return [];
@@ -333,44 +338,92 @@ async function initHomePage() {
   const countStamp = document.getElementById("heroPostCount");
   if (!gridWrap) return; // not on this page
 
-  const published = await getPublishedBlogs();
+  let currentCategory = "All";
+  let currentSearch = "";
 
-  if (countStamp) {
-    countStamp.textContent = published.length;
+  async function updateList() {
+    const blogs = await getPublishedBlogs({ search: currentSearch, category: currentCategory });
+    
+    if (countStamp && !currentSearch && currentCategory === "All") {
+      countStamp.textContent = blogs.length;
+    }
+
+    const isFiltering = currentSearch || (currentCategory && currentCategory !== "All");
+
+    if (isFiltering) {
+      if (featuredWrap) featuredWrap.classList.add("hidden");
+      gridWrap.classList.remove("hidden");
+      gridWrap.innerHTML = blogs.map(blogCardHtml).join("") ||
+        `<div class="empty-state"><h3>No matches found</h3><p>Try adjusting your search or category filters.</p></div>`;
+      if (emptyWrap) emptyWrap.classList.add("hidden");
+    } else {
+      if (blogs.length === 0) {
+        if (featuredWrap) featuredWrap.classList.add("hidden");
+        gridWrap.classList.add("hidden");
+        if (emptyWrap) emptyWrap.classList.remove("hidden");
+        return;
+      }
+
+      if (emptyWrap) emptyWrap.classList.add("hidden");
+
+      const [featured, ...rest] = blogs;
+
+      if (featuredWrap) {
+        featuredWrap.classList.remove("hidden");
+        const excerpt = makeExcerpt(featured.content, 220);
+        featuredWrap.innerHTML = `
+          <img src="${escapeHtml(featured.image)}" alt="${escapeHtml(featured.title)}">
+          <div class="featured-post-body">
+            <span class="tag">${escapeHtml(featured.category)}</span>
+            <h3>${escapeHtml(featured.title)}</h3>
+            <div class="byline">
+              <span>${escapeHtml(featured.authorName)}</span>
+              <span class="dot"></span>
+              <span>${formatDate(featured.createdAt)}</span>
+            </div>
+            <p class="excerpt">${escapeHtml(excerpt)}</p>
+            <a href="post.html?id=${encodeURIComponent(featured.id)}" class="btn btn-primary">Read full story</a>
+          </div>
+        `;
+      }
+
+      const cardsSource = featuredWrap ? rest : blogs;
+      gridWrap.classList.remove("hidden");
+      gridWrap.innerHTML = cardsSource.map(blogCardHtml).join("") ||
+        `<div class="empty-state"><h3>More stories coming soon</h3><p>Check back shortly.</p></div>`;
+    }
   }
 
-  if (published.length === 0) {
-    if (featuredWrap) featuredWrap.classList.add("hidden");
-    gridWrap.classList.add("hidden");
-    if (emptyWrap) emptyWrap.classList.remove("hidden");
-    return;
+  // Initial render
+  await updateList();
+
+  // Search input handler with debounce
+  const searchInput = document.getElementById("blogSearch");
+  if (searchInput) {
+    let debounceTimer;
+    searchInput.addEventListener("input", (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        currentSearch = e.target.value.trim();
+        updateList();
+      }, 300);
+    });
   }
 
-  if (emptyWrap) emptyWrap.classList.add("hidden");
+  // Category filters click handler
+  const categoryFilters = document.getElementById("categoryFilters");
+  if (categoryFilters) {
+    categoryFilters.addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-filter");
+      if (!btn) return;
 
-  const [featured, ...rest] = published;
+      categoryFilters.querySelectorAll(".btn-filter").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
 
-  if (featuredWrap) {
-    const excerpt = makeExcerpt(featured.content, 220);
-    featuredWrap.innerHTML = `
-      <img src="${escapeHtml(featured.image)}" alt="${escapeHtml(featured.title)}">
-      <div class="featured-post-body">
-        <span class="tag">${escapeHtml(featured.category)}</span>
-        <h3>${escapeHtml(featured.title)}</h3>
-        <div class="byline">
-          <span>${escapeHtml(featured.authorName)}</span>
-          <span class="dot"></span>
-          <span>${formatDate(featured.createdAt)}</span>
-        </div>
-        <p class="excerpt">${escapeHtml(excerpt)}</p>
-        <a href="post.html?id=${encodeURIComponent(featured.id)}" class="btn btn-primary">Read full story</a>
-      </div>
-    `;
+      currentCategory = btn.dataset.category;
+      updateList();
+    });
   }
-
-  const cardsSource = featuredWrap ? rest : published;
-  gridWrap.innerHTML = cardsSource.map(blogCardHtml).join("") ||
-    `<div class="empty-state"><h3>More stories coming soon</h3><p>Check back shortly.</p></div>`;
 }
 
 /* =========================================================
@@ -766,6 +819,90 @@ async function initCreateBlogPage() {
    Runs on every page once the DOM is ready.
    ========================================================= */
 
+/* =========================================================
+   FORGOT / RESET PASSWORD PAGE
+   ========================================================= */
+async function resetPassword(email, password) {
+  const res = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  return res.json();
+}
+
+function initForgotPasswordPage() {
+  const form = document.getElementById('forgotForm');
+  if (!form) return;
+
+  const alertBox          = document.getElementById('forgotAlert');
+  const emailField        = document.getElementById('forgotEmailField');
+  const newPasswordField  = document.getElementById('newPasswordField');
+  const confirmField      = document.getElementById('confirmNewPasswordField');
+  const emailInput        = document.getElementById('forgotEmail');
+  const newPasswordInput  = document.getElementById('newPassword');
+  const confirmInput      = document.getElementById('confirmNewPassword');
+
+  function clearErrors() {
+    [emailField, newPasswordField, confirmField].forEach(f => f && f.classList.remove('field-error-active'));
+    alertBox.style.display = 'none';
+    alertBox.textContent   = '';
+  }
+
+  function showAlert(msg) {
+    alertBox.textContent   = msg;
+    alertBox.style.display = 'block';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErrors();
+
+    const email    = emailInput.value.trim();
+    const password = newPasswordInput.value;
+    const confirm  = confirmInput.value;
+    let valid      = true;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      emailField.classList.add('field-error-active');
+      valid = false;
+    }
+    if (!password || password.length < 6) {
+      newPasswordField.classList.add('field-error-active');
+      valid = false;
+    }
+    if (password !== confirm) {
+      confirmField.classList.add('field-error-active');
+      valid = false;
+    }
+    if (!valid) return;
+
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled    = true;
+    btn.textContent = 'Resetting…';
+
+    try {
+      const data = await resetPassword(email, password);
+      if (data.success) {
+        showAlert('✅ ' + data.message);
+        alertBox.style.background    = '#d1fae5';
+        alertBox.style.color         = '#065f46';
+        alertBox.style.borderColor   = '#6ee7b7';
+        setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+      } else {
+        showAlert(data.message || 'Reset failed. Please try again.');
+        btn.disabled    = false;
+        btn.textContent = 'Reset Password';
+      }
+    } catch {
+      showAlert('Network error. Please try again.');
+      btn.disabled    = false;
+      btn.textContent = 'Reset Password';
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   seedSampleData();
   initNavbar();
@@ -775,4 +912,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initLoginPage();
   initDashboardPage();
   initCreateBlogPage();
+  initForgotPasswordPage();
 });

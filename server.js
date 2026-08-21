@@ -72,7 +72,7 @@ app.post('/api/auth/register', async (req, res) => {
     const newUser = await db.saveUser({
       _id: userId,
       fullName,
-      email,
+      email: email.toLowerCase().trim(),
       password: passwordHash
     });
 
@@ -98,7 +98,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 
   try {
-    const user = await db.getUserByEmail(email);
+    const user = await db.getUserByEmail(email.toLowerCase().trim());
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid email or password.' });
     }
@@ -129,6 +129,32 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Reset Password
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'Email and new password are required.' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+  }
+
+  try {
+    const user = await db.getUserByEmail(email.toLowerCase().trim());
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'No account found with this email address.' });
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const newHash = bcrypt.hashSync(password, salt);
+    await db.resetPassword(email.toLowerCase().trim(), newHash);
+
+    res.json({ success: true, message: 'Password reset successfully. You can now log in.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Internal server error during password reset.' });
+  }
+});
+
 /* =========================================================
    BLOG ENDPOINTS
    ========================================================= */
@@ -136,7 +162,8 @@ app.post('/api/auth/login', async (req, res) => {
 // Get all published blogs (Public)
 app.get('/api/blogs', async (req, res) => {
   try {
-    const blogs = await db.getPublishedBlogs();
+    const { search, category } = req.query;
+    const blogs = await db.getPublishedBlogs({ search, category });
     res.json(blogs);
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to retrieve blogs.' });
