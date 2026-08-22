@@ -4,6 +4,8 @@ const cors = require('cors');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const multer = require('multer');
 const db = require('./database');
 
 const app = express();
@@ -16,11 +18,34 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
+// Multer upload directory
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, 'blog-' + uniqueSuffix + ext);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 } // 20MB limit
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend files
+// Serve static frontend and uploads
+app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(path.join(__dirname)));
 
 // Authentication middleware
@@ -155,6 +180,115 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
+// Update Profile (Protected)
+app.post('/api/auth/update-profile', authMiddleware, async (req, res) => {
+  const { fullName, email } = req.body;
+  if (!fullName || fullName.trim().length < 2) {
+    return res.status(400).json({ success: false, message: 'Full name must be at least 2 characters.' });
+  }
+
+  const updates = { fullName: fullName.trim() };
+
+  if (email) {
+    const cleanEmail = email.toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
+    }
+
+    // Check if another user already uses this email
+    const existing = await db.getUserByEmail(cleanEmail);
+    if (existing && existing.id !== req.user.id) {
+      return res.status(400).json({ success: false, message: 'This email is already in use by another account.' });
+    }
+    updates.email = cleanEmail;
+  }
+
+  try {
+    const updated = await db.updateUserProfile(req.user.id, updates);
+    if (!updated) return res.status(404).json({ success: false, message: 'User not found.' });
+
+    // Generate updated JWT token
+    const token = jwt.sign(
+      { id: updated.id, fullName: updated.fullName, email: updated.email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully.',
+      token,
+      user: {
+        id: updated.id,
+        fullName: updated.fullName,
+        email: updated.email
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to update profile.' });
+  }
+});
+
+// Change Password (Protected)
+app.post('/api/auth/change-password', authMiddleware, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Old and new passwords are required.' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: 'New password must be at least 6 characters.' });
+  }
+  try {
+    const user = await db.getUserById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+    const match = bcrypt.compareSync(oldPassword, user.password);
+    if (!match) return res.status(400).json({ success: false, message: 'Old password is incorrect.' });
+
+    const salt = bcrypt.genSaltSync(10);
+    const newHash = bcrypt.hashSync(newPassword, salt);
+    await db.resetPassword(user.email, newHash);
+    res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to change password.' });
+  }
+});
+
+// Get current logged-in user from MongoDB Atlas (Protected)
+app.get('/api/auth/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await db.getUserById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch user.' });
+  }
+});
+
+// Upload Blog Image (Protected)
+app.post('/api/upload', authMiddleware, (req, res) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.error("Multer upload error:", err);
+      return res.status(400).json({ success: false, message: err.message || 'File upload failed.' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image file provided.' });
+    }
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ success: true, url: fileUrl });
+  });
+});
+
 /* =========================================================
    BLOG ENDPOINTS
    ========================================================= */
@@ -223,7 +357,7 @@ app.post('/api/blogs', authMiddleware, async (req, res) => {
       _id: blogId,
       title,
       category,
-      image: image || `https://picsum.photos/seed/${encodeURIComponent(title)}/800/500`,
+      image: image || '',
       content,
       status, // 'published' | 'draft'
       authorId: req.user.id,
@@ -251,7 +385,7 @@ app.put('/api/blogs/:id', authMiddleware, async (req, res) => {
     const updates = {};
     if (title !== undefined) updates.title = title;
     if (category !== undefined) updates.category = category;
-    if (image !== undefined) updates.image = image || `https://picsum.photos/seed/${encodeURIComponent(title || blog.title)}/800/500`;
+    if (image !== undefined) updates.image = image;
     if (content !== undefined) updates.content = content;
     if (status !== undefined) updates.status = status;
 

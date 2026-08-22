@@ -58,8 +58,28 @@
           </div>
 
           <div class="field">
-            <label for="blogImage">Featured image URL <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
-            <input type="url" id="blogImage" placeholder="https://example.com/image.jpg">
+            <label>Featured image <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+            <!-- Toggle tabs -->
+            <div class="img-toggle-tabs">
+              <button type="button" class="img-tab active" id="tabUrl">🔗 Use URL</button>
+              <button type="button" class="img-tab" id="tabUpload">📁 Upload file</button>
+            </div>
+            <!-- URL input -->
+            <div id="imgUrlWrap">
+              <input type="url" id="blogImage" placeholder="https://example.com/image.jpg">
+            </div>
+            <!-- File upload input -->
+            <div id="imgUploadWrap" style="display:none;">
+              <div class="upload-drop-zone" id="uploadDropZone">
+                <span id="uploadLabel">Click or drag an image here</span>
+                <input type="file" id="blogImageFile" accept="image/*" style="display:none;">
+              </div>
+              <p class="upload-status" id="uploadStatus"></p>
+            </div>
+            <!-- Remove Image Button -->
+            <button type="button" class="btn btn-ghost btn-sm" id="btnRemoveImage" style="display:none;margin-top:8px;color:#dc2626;padding:4px 8px;font-size:0.8rem;">
+              🗑 Remove image
+            </button>
           </div>
 
           <div class="field" id="blogContentField">

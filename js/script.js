@@ -77,6 +77,13 @@ async function apiFetch(endpoint, options = {}) {
     headers,
   });
 
+  // Auto-logout if token is expired or invalid
+  if (response.status === 401) {
+    clearSession();
+    window.location.href = 'login.html';
+    return;
+  }
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || 'API request failed');
@@ -313,9 +320,12 @@ function initNavbar() {
 
 function blogCardHtml(blog) {
   const excerpt = makeExcerpt(blog.content);
+  const imgTag = blog.image
+    ? `<img class="thumb" src="${escapeHtml(blog.image)}" alt="${escapeHtml(blog.title)}" loading="lazy">`
+    : "";
   return `
     <article class="blog-card">
-      <img class="thumb" src="${escapeHtml(blog.image)}" alt="${escapeHtml(blog.title)}" loading="lazy">
+      ${imgTag}
       <div class="blog-card-body">
         <span class="tag">${escapeHtml(blog.category)}</span>
         <h3>${escapeHtml(blog.title)}</h3>
@@ -370,9 +380,13 @@ async function initHomePage() {
 
       if (featuredWrap) {
         featuredWrap.classList.remove("hidden");
+        featuredWrap.className = featured.image ? "featured-post" : "featured-post no-image";
         const excerpt = makeExcerpt(featured.content, 220);
+        const featImg = featured.image
+          ? `<img src="${escapeHtml(featured.image)}" alt="${escapeHtml(featured.title)}">`
+          : "";
         featuredWrap.innerHTML = `
-          <img src="${escapeHtml(featured.image)}" alt="${escapeHtml(featured.title)}">
+          ${featImg}
           <div class="featured-post-body">
             <span class="tag">${escapeHtml(featured.category)}</span>
             <h3>${escapeHtml(featured.title)}</h3>
@@ -449,6 +463,10 @@ async function initPostPage() {
     return;
   }
 
+  const postImgTag = blog.image
+    ? `<img src="${escapeHtml(blog.image)}" alt="${escapeHtml(blog.title)}" style="width:100%;border-radius:var(--radius-md);margin-bottom:28px;max-height:420px;object-fit:cover;">`
+    : "";
+
   document.title = `${blog.title} — BlogSpace`;
   wrap.innerHTML = `
     <span class="tag">${escapeHtml(blog.category)}</span>
@@ -458,7 +476,7 @@ async function initPostPage() {
       <span class="dot"></span>
       <span>${formatDate(blog.createdAt)}</span>
     </div>
-    <img src="${escapeHtml(blog.image)}" alt="${escapeHtml(blog.title)}" style="width:100%;border-radius:var(--radius-md);margin-bottom:28px;max-height:420px;object-fit:cover;">
+    ${postImgTag}
     <div style="font-size:1.05rem;color:var(--ink-soft);line-height:1.8;white-space:pre-wrap;">${escapeHtml(blog.content)}</div>
     <a href="index.html" class="btn btn-outline mt-24">← Back to all stories</a>
   `;
@@ -673,21 +691,27 @@ async function renderDashboard() {
 
   tableBody.innerHTML = myBlogs
     .map(
-      (b) => `
-      <div class="blog-row">
-        <img class="row-thumb" src="${escapeHtml(b.image)}" alt="">
-        <div>
-          <div class="row-title">${escapeHtml(b.title)}</div>
-          <div class="row-meta">${escapeHtml(b.category)} · ${formatDate(b.createdAt)}</div>
+      (b) => {
+        const thumbHtml = b.image
+          ? `<img class="row-thumb" src="${escapeHtml(b.image)}" alt="" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex';"><div class="row-thumb" style="display:none;align-items:center;justify-content:center;background:var(--cream-soft);color:var(--cobalt);font-weight:700;font-size:1.1rem;border-radius:var(--radius-sm);">${escapeHtml((b.category || b.title || 'B').charAt(0).toUpperCase())}</div>`
+          : `<div class="row-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--cream-soft);color:var(--cobalt);font-weight:700;font-size:1.1rem;border-radius:var(--radius-sm);">${escapeHtml((b.category || b.title || 'B').charAt(0).toUpperCase())}</div>`;
+
+        return `
+        <div class="blog-row">
+          ${thumbHtml}
+          <div>
+            <div class="row-title">${escapeHtml(b.title)}</div>
+            <div class="row-meta">${escapeHtml(b.category)} · ${formatDate(b.createdAt)}</div>
+          </div>
+          <div><span class="tag status-${b.status}">${b.status}</span></div>
+          <div class="row-meta">${formatDate(b.createdAt)}</div>
+          <div class="row-actions">
+            <button class="icon-btn" data-edit="${b.id}" title="Edit" aria-label="Edit">✎</button>
+            <button class="icon-btn danger" data-delete="${b.id}" title="Delete" aria-label="Delete">🗑</button>
+          </div>
         </div>
-        <div><span class="tag status-${b.status}">${b.status}</span></div>
-        <div class="row-meta">${formatDate(b.createdAt)}</div>
-        <div class="row-actions">
-          <button class="icon-btn" data-edit="${b.id}" title="Edit" aria-label="Edit">✎</button>
-          <button class="icon-btn danger" data-delete="${b.id}" title="Delete" aria-label="Delete">🗑</button>
-        </div>
-      </div>
-    `
+      `;
+      }
     )
     .join("");
 }
@@ -726,28 +750,172 @@ async function initCreateBlogPage() {
     return;
   }
 
-  if (existingBlog) {
-    pageTitle.textContent = "Edit Blog";
-    titleInput.value = existingBlog.title;
-    categoryInput.value = existingBlog.category;
-    imageInput.value = existingBlog.image;
-    contentInput.value = existingBlog.content;
-    updatePreview();
-  }
+  const btnRemoveImage = document.getElementById("btnRemoveImage");
+  let currentPreviewUrl = "";
 
   function updatePreview() {
-    const url = imageInput.value.trim();
+    const url = imageInput.value.trim() || currentPreviewUrl;
     if (url) {
-      previewThumb.innerHTML = `<img src="${escapeHtml(url)}" alt="Preview" style="width:100%;height:100%;object-fit:cover;">`;
+      previewThumb.innerHTML = `<img src="${escapeHtml(url)}" alt="Preview" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);">`;
+      if (btnRemoveImage) btnRemoveImage.style.display = "inline-block";
     } else {
       previewThumb.innerHTML = "Image preview appears here";
+      if (btnRemoveImage) btnRemoveImage.style.display = "none";
     }
     charCount.textContent = `${contentInput.value.length} characters`;
   }
 
-  imageInput.addEventListener("input", updatePreview);
+  if (existingBlog) {
+    pageTitle.textContent = "Edit Blog";
+    titleInput.value = existingBlog.title || "";
+    categoryInput.value = existingBlog.category || "";
+    imageInput.value = existingBlog.image || "";
+    contentInput.value = existingBlog.content || "";
+    currentPreviewUrl = existingBlog.image || "";
+    updatePreview();
+  } else {
+    currentPreviewUrl = imageInput.value.trim();
+    updatePreview();
+  }
+
+  imageInput.addEventListener("input", () => {
+    currentPreviewUrl = imageInput.value.trim();
+    updatePreview();
+  });
   contentInput.addEventListener("input", updatePreview);
+
+  if (btnRemoveImage) {
+    btnRemoveImage.addEventListener("click", () => {
+      imageInput.value = "";
+      currentPreviewUrl = "";
+      if (blogImageFile) blogImageFile.value = "";
+      if (uploadLabel) uploadLabel.textContent = "Click or drag an image here";
+      if (uploadStatus) uploadStatus.textContent = "";
+      updatePreview();
+      showToast("Image removed.", "info");
+    });
+  }
+
   updatePreview();
+
+  // Image Tabs & File Upload Handling
+  const tabUrl = document.getElementById("tabUrl");
+  const tabUpload = document.getElementById("tabUpload");
+  const imgUrlWrap = document.getElementById("imgUrlWrap");
+  const imgUploadWrap = document.getElementById("imgUploadWrap");
+  const uploadDropZone = document.getElementById("uploadDropZone");
+  const blogImageFile = document.getElementById("blogImageFile");
+  const uploadLabel = document.getElementById("uploadLabel");
+  const uploadStatus = document.getElementById("uploadStatus");
+
+  if (tabUrl && tabUpload) {
+    tabUrl.addEventListener("click", () => {
+      tabUrl.classList.add("active");
+      tabUpload.classList.remove("active");
+      imgUrlWrap.style.display = "block";
+      imgUploadWrap.style.display = "none";
+    });
+
+    tabUpload.addEventListener("click", () => {
+      tabUpload.classList.add("active");
+      tabUrl.classList.remove("active");
+      imgUrlWrap.style.display = "none";
+      imgUploadWrap.style.display = "block";
+    });
+  }
+
+  if (uploadDropZone && blogImageFile) {
+    uploadDropZone.addEventListener("click", () => blogImageFile.click());
+    
+    uploadDropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      uploadDropZone.classList.add("dragover");
+    });
+    
+    uploadDropZone.addEventListener("dragleave", () => {
+      uploadDropZone.classList.remove("dragover");
+    });
+    
+    uploadDropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      uploadDropZone.classList.remove("dragover");
+      if (e.dataTransfer.files && e.dataTransfer.files.length) {
+        handleImageUpload(e.dataTransfer.files[0]);
+      }
+    });
+
+    blogImageFile.addEventListener("change", () => {
+      if (blogImageFile.files && blogImageFile.files.length) {
+        handleImageUpload(blogImageFile.files[0]);
+      }
+    });
+  }
+
+  let activeUploadPromise = null;
+
+  async function handleImageUpload(file) {
+    const isImage = file.type.startsWith("image/") || /\.(jpe?g|png|gif|webp|svg|bmp|jfif)$/i.test(file.name);
+    if (!isImage) {
+      showToast("Please select a valid image file", "error");
+      return;
+    }
+
+    // ⚡ Instant Local Preview (0ms latency)
+    try {
+      currentPreviewUrl = URL.createObjectURL(file);
+      updatePreview();
+    } catch (e) {
+      console.warn("Local preview object URL error:", e);
+    }
+
+    uploadLabel.textContent = `Uploading ${file.name}...`;
+    uploadStatus.textContent = "Uploading image to server...";
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    activeUploadPromise = (async () => {
+      try {
+        const session = readSession();
+        const headers = {};
+        if (session && session.token) {
+          headers["Authorization"] = `Bearer ${session.token}`;
+        }
+
+        const res = await fetch(`${API_URL}/api/upload`, {
+          method: "POST",
+          headers,
+          body: formData
+        });
+
+        const data = await res.json();
+        if (data && data.success && data.url) {
+          imageInput.value = data.url;
+          currentPreviewUrl = data.url;
+          uploadLabel.textContent = `Uploaded: ${file.name}`;
+          uploadStatus.textContent = "✅ Image uploaded successfully!";
+          updatePreview();
+          showToast("Image uploaded!", "success");
+          return data.url;
+        } else {
+          uploadLabel.textContent = "Click or drag an image here";
+          uploadStatus.textContent = "❌ " + ((data && data.message) || "Upload failed");
+          showToast((data && data.message) || "Upload failed", "error");
+          return null;
+        }
+      } catch (err) {
+        console.error("Upload error:", err);
+        uploadLabel.textContent = "Click or drag an image here";
+        uploadStatus.textContent = "❌ Upload error: " + err.message;
+        showToast("Error uploading image: " + err.message, "error");
+        return null;
+      } finally {
+        activeUploadPromise = null;
+      }
+    })();
+
+    await activeUploadPromise;
+  }
 
   function clearErrors() {
     ["blogTitleField", "blogCategoryField", "blogContentField"].forEach((id) => {
@@ -776,6 +944,14 @@ async function initCreateBlogPage() {
 
   async function saveBlog(status) {
     if (!validate()) return;
+
+    if (activeUploadPromise) {
+      uploadStatus.textContent = "⏳ Finishing image upload before publishing...";
+      const uploadedUrl = await activeUploadPromise;
+      if (uploadedUrl) {
+        imageInput.value = uploadedUrl;
+      }
+    }
 
     const payload = {
       title: titleInput.value.trim(),
@@ -903,6 +1079,186 @@ function initForgotPasswordPage() {
   });
 }
 
+/* =========================================================
+   PROFILE PAGE (profile.html)
+   ========================================================= */
+
+async function updateProfile(fullName, email) {
+  return await apiFetch('/api/auth/update-profile', {
+    method: 'POST',
+    body: JSON.stringify({ fullName, email })
+  });
+}
+
+async function changePassword(oldPassword, newPassword) {
+  return await apiFetch('/api/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ oldPassword, newPassword })
+  });
+}
+
+async function initProfilePage() {
+  const profileForm = document.getElementById('profileForm');
+  if (!profileForm) return;
+
+  requireAuth();
+  const session = getCurrentUser();
+  if (!session) return;
+
+  // Immediately fill sidebar and form fields with session data
+  const emailInput = document.getElementById('profileEmail');
+  const nameInput = document.getElementById('profileName');
+  const avatarEl = document.getElementById('dashAvatar');
+  const userEl = document.getElementById('dashUserName');
+  const userEmailEl = document.getElementById('dashUserEmail');
+
+  if (emailInput && session.email) emailInput.value = session.email;
+  if (nameInput && session.fullName) nameInput.value = session.fullName;
+  if (avatarEl && session.fullName) avatarEl.textContent = session.fullName.charAt(0).toUpperCase();
+  if (userEl && session.fullName) userEl.textContent = session.fullName;
+  if (userEmailEl && session.email) userEmailEl.textContent = session.email;
+
+  // Logout
+  const logoutBtn = document.getElementById('dashLogoutBtn');
+  if (logoutBtn) logoutBtn.addEventListener('click', logoutUser);
+
+  // Fetch and sync LIVE user data from MongoDB Atlas
+  try {
+    const result = await apiFetch('/api/auth/me');
+    if (result && result.user) {
+      const user = result.user;
+      if (emailInput) emailInput.value = user.email || '';
+      if (nameInput) nameInput.value = user.fullName || '';
+      if (avatarEl) avatarEl.textContent = (user.fullName || '?').charAt(0).toUpperCase();
+      if (userEl) userEl.textContent = user.fullName || '—';
+      if (userEmailEl) userEmailEl.textContent = user.email || '—';
+    }
+  } catch (err) {
+    console.warn("Could not fetch fresh user profile from database:", err);
+  }
+
+  /* ---- Profile Info Form ---- */
+  const profileAlert    = document.getElementById('profileAlert');
+  const profileNameFld  = document.getElementById('profileNameField');
+  const profileEmailFld = document.getElementById('profileEmailField');
+
+  profileForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (profileNameFld) profileNameFld.classList.remove('has-error');
+    if (profileEmailFld) profileEmailFld.classList.remove('has-error');
+    profileAlert.style.display = 'none';
+
+    const fullName = document.getElementById('profileName').value.trim();
+    const email = document.getElementById('profileEmail').value.trim();
+    let valid = true;
+
+    if (fullName.length < 2) {
+      if (profileNameFld) profileNameFld.classList.add('has-error');
+      valid = false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      if (profileEmailFld) profileEmailFld.classList.add('has-error');
+      valid = false;
+    }
+
+    if (!valid) return;
+
+    const btn = document.getElementById('profileSaveBtn');
+    btn.disabled    = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      const data = await updateProfile(fullName, email);
+      if (data && data.success) {
+        // Update stored session with new name, email, and token
+        const session = readSession();
+        session.fullName = data.user.fullName;
+        session.email = data.user.email;
+        if (data.token) session.token = data.token;
+        writeSession(session, !!localStorage.getItem('blogspace_session'));
+
+        profileAlert.textContent    = '✅ Profile updated successfully!';
+        profileAlert.style.display  = 'block';
+        profileAlert.style.background   = '#d1fae5';
+        profileAlert.style.color        = '#065f46';
+        profileAlert.style.borderColor  = '#6ee7b7';
+        document.getElementById('dashUserName').textContent = fullName;
+        document.getElementById('dashUserEmail').textContent = email;
+        document.getElementById('dashAvatar').textContent   = fullName.charAt(0).toUpperCase();
+        showToast('Profile updated!', 'success');
+      } else {
+        profileAlert.textContent   = (data && data.message) || 'Update failed.';
+        profileAlert.style.display = 'block';
+        profileAlert.style.background  = '';
+        profileAlert.style.color       = '';
+        profileAlert.style.borderColor = '';
+      }
+    } catch (err) {
+      profileAlert.textContent   = err.message || 'Network error.';
+      profileAlert.style.display = 'block';
+    }
+
+    btn.disabled    = false;
+    btn.textContent = 'Save changes';
+  });
+
+  /* ---- Change Password Form ---- */
+  const pwdForm    = document.getElementById('passwordForm');
+  const pwdAlert   = document.getElementById('pwdAlert');
+  const oldPwdFld  = document.getElementById('oldPasswordField');
+  const newPwdFld  = document.getElementById('newPasswordField');
+  const confPwdFld = document.getElementById('confirmPwdField');
+
+  pwdForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    [oldPwdFld, newPwdFld, confPwdFld].forEach(f => f.classList.remove('has-error'));
+    pwdAlert.style.display = 'none';
+
+    const oldPassword = document.getElementById('oldPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPwd  = document.getElementById('confirmPwd').value;
+    let valid = true;
+
+    if (!oldPassword) { oldPwdFld.classList.add('has-error'); valid = false; }
+    if (!newPassword || newPassword.length < 6) { newPwdFld.classList.add('has-error'); valid = false; }
+    if (newPassword !== confirmPwd) { confPwdFld.classList.add('has-error'); valid = false; }
+    if (!valid) return;
+
+    const btn = document.getElementById('pwdSaveBtn');
+    btn.disabled    = true;
+    btn.textContent = 'Updating…';
+
+    try {
+      const data = await changePassword(oldPassword, newPassword);
+      if (data && data.success) {
+        pwdAlert.textContent   = '✅ Password changed! Please log in again.';
+        pwdAlert.style.display = 'block';
+        pwdAlert.style.background  = '#d1fae5';
+        pwdAlert.style.color       = '#065f46';
+        pwdAlert.style.borderColor = '#6ee7b7';
+        pwdForm.reset();
+        showToast('Password changed. Logging out…', 'success');
+        setTimeout(() => logoutUser(), 2500);
+      } else {
+        pwdAlert.textContent   = (data && data.message) || 'Failed to change password.';
+        pwdAlert.style.display = 'block';
+        pwdAlert.style.background  = '';
+        pwdAlert.style.color       = '';
+        pwdAlert.style.borderColor = '';
+        btn.disabled    = false;
+        btn.textContent = 'Update password';
+      }
+    } catch (err) {
+      pwdAlert.textContent   = err.message || 'Network error.';
+      pwdAlert.style.display = 'block';
+      btn.disabled    = false;
+      btn.textContent = 'Update password';
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   seedSampleData();
   initNavbar();
@@ -913,4 +1269,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initDashboardPage();
   initCreateBlogPage();
   initForgotPasswordPage();
+  initProfilePage();
 });

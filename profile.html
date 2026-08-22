@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile — BlogSpace</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo">Blog<span>Space</span></a>
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html">Home</a>
+      <a href="index.html#blogs">Blogs</a>
+      <a href="index.html#about">About</a>
+    </nav>
+    <div class="nav-cta" id="navCta"></div>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="dash-layout">
+  <!-- ===== Sidebar ===== -->
+  <aside class="dash-sidebar">
+    <div class="dash-user">
+      <div class="dash-avatar" id="dashAvatar">?</div>
+      <div>
+        <div class="name" id="dashUserName">—</div>
+        <div class="email" id="dashUserEmail">—</div>
+      </div>
+    </div>
+    <nav class="dash-nav">
+      <a href="dashboard.html">▤ Overview</a>
+      <a href="profile.html" class="active">👤 My Profile</a>
+      <a href="create-blog.html">✎ Create blog</a>
+      <a href="index.html">🏠 View site</a>
+    </nav>
+    <button class="btn btn-outline btn-block" id="dashLogoutBtn">Log out</button>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <main class="dash-main">
+    <div class="dash-header">
+      <div>
+        <h1>My Profile</h1>
+        <p>Manage your account details and password.</p>
+      </div>
+    </div>
+
+    <!-- Profile Info Card -->
+    <div class="dash-table-wrap" style="margin-bottom:2rem;">
+      <div class="dash-table-head">
+        <h3>Profile Information</h3>
+      </div>
+      <div style="padding:1.5rem;">
+        <div class="alert alert-error" id="profileAlert" style="display:none;margin-bottom:1rem;"></div>
+
+        <form id="profileForm" novalidate>
+          <div class="field" id="profileEmailField" style="margin-bottom:1rem;">
+            <label for="profileEmail">Email address</label>
+            <input type="email" id="profileEmail" placeholder="you@example.com" autocomplete="email">
+            <p class="field-error">Enter a valid email address.</p>
+          </div>
+
+          <div class="field" id="profileNameField" style="margin-bottom:1.5rem;">
+            <label for="profileName">Full name</label>
+            <input type="text" id="profileName" placeholder="Your full name" autocomplete="name">
+            <p class="field-error">Name must be at least 2 characters.</p>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="profileSaveBtn">Save changes</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Change Password Card -->
+    <div class="dash-table-wrap">
+      <div class="dash-table-head">
+        <h3>Change Password</h3>
+      </div>
+      <div style="padding:1.5rem;">
+        <div class="alert alert-error" id="pwdAlert" style="display:none;margin-bottom:1rem;"></div>
+
+        <form id="passwordForm" novalidate>
+          <div class="field" id="oldPasswordField" style="margin-bottom:1rem;">
+            <label for="oldPassword">Current password</label>
+            <input type="password" id="oldPassword" placeholder="Your current password" autocomplete="current-password">
+            <p class="field-error">Enter your current password.</p>
+          </div>
+
+          <div class="field" id="newPasswordField" style="margin-bottom:1rem;">
+            <label for="newPassword">New password</label>
+            <input type="password" id="newPassword" placeholder="At least 6 characters" autocomplete="new-password">
+            <p class="field-error">New password must be at least 6 characters.</p>
+          </div>
+
+          <div class="field" id="confirmPwdField" style="margin-bottom:1.5rem;">
+            <label for="confirmPwd">Confirm new password</label>
+            <input type="password" id="confirmPwd" placeholder="Re-enter new password" autocomplete="new-password">
+            <p class="field-error">Passwords do not match.</p>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="pwdSaveBtn">Update password</button>
+        </form>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/script.js"></script>
+</body>
+</html>

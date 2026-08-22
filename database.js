@@ -163,6 +163,16 @@ module.exports = {
   getUserByEmail: async (email) => {
     return await User.findOne({ email: email.toLowerCase() });
   },
+  getUserById: async (id) => {
+    return await User.findById(id);
+  },
+  updateUserProfile: async (id, updates) => {
+    return await User.findByIdAndUpdate(
+      id,
+      updates,
+      { new: true }
+    );
+  },
   saveUser: async (userData) => {
     const user = new User(userData);
     return await user.save();
