@@ -1,10 +1,11 @@
 {
   "name": "blog-application",
   "version": "1.0.0",
-  "description": "A fully functional, front-end-only blog platform built with plain HTML5, CSS3 and JavaScript. No frameworks, no build step, no backend — all data (users, sessions, and blog posts) is stored in the browser's `localStorage` / `sessionStorage`.",
-  "main": "index.js",
+  "description": "A modern Full Stack Blog Platform built with Node.js, Express, MongoDB Atlas, Mongoose, JWT Authentication, and Vanilla JS/CSS3.",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "repository": {
     "type": "git",

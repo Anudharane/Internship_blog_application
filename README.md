@@ -1,161 +1,175 @@
-# BlogSpace — Frontend Blog Application
+# 🚀 BlogSpace — Full Stack Blog Application
 
-A fully functional, front-end-only blog platform built with plain HTML5, CSS3
-and JavaScript. No frameworks, no build step, no backend — all data (users,
-sessions, and blog posts) is stored in the browser's `localStorage` /
-`sessionStorage`.
+A modern, responsive, and secure **Full Stack Blog Platform** built with **Node.js, Express 5, MongoDB Atlas, Mongoose, and JWT Authentication**, featuring a responsive vanilla JavaScript & CSS3 frontend.
 
-## Folder structure
+---
+
+## 🌟 Key Features
+
+* **🔐 Secure Authentication & Session Management**:
+  * User Registration with automatic email normalization and password validation.
+  * Password encryption using **bcryptjs** (10 salt rounds).
+  * **JSON Web Tokens (JWT)** for stateless, secure API authentication.
+  * Remember Me functionality using `localStorage` / `sessionStorage`.
+  * Forgot Password & Password Reset flow.
+  * Auto-logout on token expiration.
+
+* **📝 Complete Blog CRUD Operations**:
+  * **Create**: Write stories with category selection and image options (URL or File Upload).
+  * **Read**: Dynamic feeds on the Home page, single-post reader (`post.html?id=...`), and personal dashboard.
+  * **Update**: Full editing capabilities for post title, category, image, and content.
+  * **Delete**: Secure deletion with custom interactive confirmation modal dialogs.
+  * **Draft & Publish**: Save drafts privately or publish directly to the public feed.
+
+* **📸 Dual Image Support & File Uploads**:
+  * **🔗 Use URL**: Paste external web image URLs.
+  * **📁 File Upload**: Drag-and-drop or browse image files from your computer (supported formats: JPG, PNG, GIF, WebP, SVG, up to 20MB).
+  * **⚡ Instant Preview**: Zero-latency local thumbnail preview before uploading.
+
+* **🔍 Real-Time Search & Category Filtering**:
+  * Debounced search bar (300ms) with case-insensitive MongoDB `$regex` querying across titles and content.
+  * Quick filter chips: *All, Design, Development, Lifestyle, Career, Productivity, Other*.
+
+* **👤 User Profile Management**:
+  * Live profile view (`profile.html`) synced in real-time with MongoDB Atlas.
+  * Edit Full Name and Email address with duplicate email prevention.
+  * Change password securely by verifying the existing password first.
+
+* **📱 Modern, Mobile-First UI**:
+  * Responsive layout with mobile hamburger navigation.
+  * Clean typography, interactive cards, toast notifications, and zero external CSS/JS framework bloat.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| **Frontend** | HTML5, CSS3 (Modern Flexbox & CSS Grid), Vanilla JavaScript (ES6+ Async/Await) |
+| **Backend** | Node.js, Express 5 REST API |
+| **Database** | MongoDB Atlas (Cloud NoSQL DB), Mongoose ODM |
+| **Security & Auth** | JSON Web Tokens (`jsonwebtoken`), Password Hashing (`bcryptjs`), CORS |
+| **File Uploads** | Multer |
+| **Environment** | Dotenv (`.env`) |
+
+---
+
+## 📂 Project Directory Structure
 
 ```
 blog-application/
-│
-├── index.html          Home page (hero, featured post, blog grid)
-├── login.html           Log in
-├── register.html        Register
-├── dashboard.html        Logged-in user's dashboard
-├── create-blog.html      Create / edit a blog post
-├── post.html             Full single-post view (used by "Read more")
-│
 ├── css/
-│   └── style.css         All styling, design tokens, responsive rules
-│
+│   └── style.css            # Unified styling, design tokens, and responsive queries
 ├── js/
-│   └── script.js         All app logic (auth, blog CRUD, page rendering)
-│
+│   └── script.js            # Client-side routing, API controllers, and DOM handlers
 ├── assets/
-│   └── images/           (empty — sample posts use hosted placeholder images)
+│   └── images/              # Static branding and illustration assets
+├── uploads/                 # Server directory for user-uploaded blog images
 │
-└── README.md
+├── index.html               # Home page (Hero, Featured story, search & archive grid)
+├── post.html                # Single story reader page
+├── login.html               # User login page
+├── register.html            # User registration page
+├── forgot-password.html     # Password reset page
+├── dashboard.html           # User dashboard (stats, post list, edit/delete)
+├── profile.html             # Profile & account security management
+├── create-blog.html         # Blog creator/editor with dual image options
+│
+├── server.js                # Express application, REST endpoints, and middleware
+├── database.js              # MongoDB Atlas connection & Mongoose data models
+├── render.yaml              # Render deployment configuration
+├── vercel.json              # Vercel deployment configuration
+├── package.json             # Project dependencies and npm scripts
+└── README.md                # Project documentation
 ```
 
-## 1. Running the project in VS Code
+---
 
-1. Unzip the project and open the `blog-application` folder in VS Code
-   (`File → Open Folder…`).
-2. Install the **Live Server** extension (by Ritwick Dey) if you don't have
-   it — search for "Live Server" in the Extensions panel.
-3. Right-click `index.html` → **"Open with Live Server"**. It will open at
-   something like `http://127.0.0.1:5500/index.html`.
-4. That's it — no `npm install`, no build step. Every page works by opening
-   the HTML file directly in a browser too, but Live Server gives you
-   auto-refresh while you edit.
+## ⚙️ Installation & Local Setup
 
-> Note: because everything runs on `localStorage`, data is scoped to the
-> browser + origin you're using. Opening the file with `file://` directly
-> instead of a local server also works — `localStorage` still functions,
-> it's just tied to that specific way of opening the file.
+### 1. Prerequisites
+* [Node.js](https://nodejs.org/) (version 18.0 or higher)
+* [MongoDB Atlas](https://www.mongodb.com/atlas/database) account or local MongoDB instance
 
-## 2. How the pages communicate
-
-There is **no server and no page-to-page messaging** — every page is a
-normal, independent HTML file. What ties them together is:
-
-- **One shared script** (`js/script.js`) is loaded on every page. It checks
-  which page it's on by looking for a few unique element IDs (e.g. only
-  `dashboard.html` has an element with id `dashUserName`), and only runs the
-  logic relevant to that page.
-- **`localStorage` / `sessionStorage` is the shared "database".** When you
-  register on `register.html`, the new user is appended to the
-  `blogspace_users` array in `localStorage`. When you log in on
-  `login.html`, `script.js` checks that array, and if the credentials
-  match, writes a small "session" object to storage. Every other page reads
-  that same session object to know who (if anyone) is logged in.
-- **Navigation is plain `<a href="...">` links and
-  `window.location.href = "..."` redirects** — e.g. after a successful
-  login, the script simply does `window.location.href = "dashboard.html"`.
-
-## 3. How the LocalStorage "authentication" works
-
-This is a front-end demo, so there's no real server-side authentication —
-everything lives in three `localStorage` keys:
-
-| Key | What it stores |
-|---|---|
-| `blogspace_users` | Array of every registered user: `{ id, fullName, email, password, createdAt }` |
-| `blogspace_session` (or `sessionStorage` version) | The currently logged-in user: `{ id, fullName, email }` |
-| `blogspace_blogs` | Array of every blog post from every user |
-
-- **Register** checks `blogspace_users` for a matching email; if none
-  exists, it pushes a new user object into the array.
-- **Login** looks for a user whose email + password match, and if found,
-  saves a trimmed-down "session" object.
-  - If **Remember me** is checked, the session is saved to `localStorage`
-    (survives closing the browser).
-  - If unchecked, it's saved to `sessionStorage` instead (cleared when the
-    tab/browser closes) — this is what makes the checkbox actually do
-    something.
-- **Protected pages** (`dashboard.html`, `create-blog.html`) call
-  `requireAuth()` at the top of their init function, which redirects to
-  `login.html` if no session is found.
-- **Logout** simply clears the session keys and redirects to `login.html`.
-
-⚠️ **Important security note:** passwords are stored in plain text in
-`localStorage`. This is fine for a learning project because there's no real
-backend, but it is **not** how you'd handle passwords in a real product
-(you'd hash them server-side, never store them in the browser, and never
-put them in localStorage). Feel free to mention this trade-off if asked
-about it in your internship review — it shows you understand the
-difference between a demo and production auth.
-
-## 4. How to test the full flow
-
-1. **Register** → go to `register.html`, fill in the form with a new email,
-   submit. You'll see a success message, then get redirected to
-   `login.html`.
-   - Try registering the same email twice — you should see "An account
-     with this email already exists."
-2. **Login** → use the email/password you just registered (or the built-in
-   demo account: `maya@blogspace.demo` / `Demo@1234`). You'll land on
-   `dashboard.html`.
-   - Try a wrong password — you should see "Invalid email or password."
-3. **Dashboard** → you'll see your name, stats (0/0/0 for a new user), and
-   an empty state prompting you to write your first blog.
-4. **Create Blog** → click "Create new blog", fill in a title, category and
-   content (image URL is optional), then:
-   - Click **Publish** → redirects to dashboard, post shows status
-     "published", and it now appears on the public **Home page**.
-   - Or click **Save as draft** → post shows status "draft" and does *not*
-     appear on the Home page.
-5. **Edit** → on the dashboard, click the pencil icon on any of your posts
-   — it opens `create-blog.html` pre-filled with that post's data. Change
-   something and publish/save again.
-6. **Delete** → click the trash icon — a confirmation modal appears; only
-   confirming actually deletes the post.
-7. **Refresh the browser** at any point — everything (your login, your
-   posts) is still there, because it's all in `localStorage`.
-8. **Logout** → click "Log out" in the sidebar or navbar — you're returned
-   to `login.html`, and visiting `dashboard.html` directly now redirects
-   you straight back to login.
-
-## 5. Uploading the project to GitHub
-
-From inside the `blog-application` folder in a terminal:
-
+### 2. Clone the Repository
 ```bash
-git init
-git add .
-git commit -m "Initial commit: BlogSpace blog application"
-git branch -M main
-git remote add origin https://github.com/<your-username>/<your-repo-name>.git
-git push -u origin main
+git clone https://github.com/Anudharane/Internship_blog_application.git
+cd Internship_blog_application
 ```
 
-If you don't have a repo yet: go to github.com → **New repository** → give
-it a name (e.g. `blogspace-blog-app`) → **do not** initialize with a
-README (you already have one) → create it, then copy the URL it gives you
-into the `git remote add origin ...` command above.
+### 3. Install Dependencies
+```bash
+npm install
+```
 
-**To make it viewable live (optional but nice for a portfolio):**
-1. In your GitHub repo, go to **Settings → Pages**.
-2. Under "Branch", pick `main` and `/root`, then **Save**.
-3. GitHub will publish it at
-   `https://<your-username>.github.io/<your-repo-name>/` within a minute or
-   two.
+### 4. Configure Environment Variables
+Create a `.env` file in the root directory:
+```env
+PORT=3000
+MONGODB_URI=your_mongodb_atlas_connection_string
+JWT_SECRET=your_super_secret_jwt_key
+```
 
-## Notes on the sample data
+### 5. Start the Application
+```bash
+# Production start
+npm start
 
-On first load, `script.js` seeds one demo user (Maya Chen) and four
-published sample posts so the Home page isn't empty. This only happens
-once — if you clear your browser's site data (or use a fresh
-browser/profile), the seed runs again.
+# Development mode with auto-reload
+npm run dev
+```
+
+Open your browser and navigate to **`http://localhost:3000`**.
+
+---
+
+## 📡 REST API Documentation
+
+### Authentication Endpoints
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | Public | Register new user account |
+| `POST` | `/api/auth/login` | Public | Authenticate user & issue JWT |
+| `POST` | `/api/auth/reset-password` | Public | Reset password for existing email |
+| `GET` | `/api/auth/me` | 🔒 Private | Fetch current user data from MongoDB |
+| `POST` | `/api/auth/update-profile` | 🔒 Private | Update full name and email |
+| `POST` | `/api/auth/change-password` | 🔒 Private | Verify old password & update to new hash |
+
+### Blog Endpoints
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/api/blogs` | Public | Get all published posts (supports `?search=` and `?category=`) |
+| `GET` | `/api/blogs/my` | 🔒 Private | Get all blogs authored by logged-in user |
+| `GET` | `/api/blogs/:id` | Public/Private | Get single post details by ID |
+| `POST` | `/api/blogs` | 🔒 Private | Create a new blog post |
+| `PUT` | `/api/blogs/:id` | 🔒 Private | Update existing post (owner-only) |
+| `DELETE`| `/api/blogs/:id` | 🔒 Private | Delete blog post (owner-only) |
+| `POST` | `/api/upload` | 🔒 Private | Upload image file (returns `/uploads/...`) |
+
+---
+
+## 🚀 Deployment Guide
+
+### Option 1: Deploy to Render (Recommended)
+1. Push your repository to GitHub.
+2. Log into [Render](https://render.com/) and click **New → Web Service**.
+3. Connect your GitHub repository.
+4. Set the following settings:
+   - **Environment**: `Node`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+5. In the **Environment Variables** section, add:
+   - `MONGODB_URI`: `<your-mongodb-atlas-connection-string>`
+   - `JWT_SECRET`: `<your-jwt-secret>`
+6. Click **Deploy Web Service**.
+
+### Option 2: Deploy to Vercel
+1. Install Vercel CLI or import repository from [Vercel Dashboard](https://vercel.com/).
+2. Vercel automatically detects the included `vercel.json` configuration.
+3. Add `MONGODB_URI` and `JWT_SECRET` in **Project Settings → Environment Variables**.
+4. Click **Deploy**.
+
+---
+
+## 📄 License
+This project is licensed under the ISC License.
